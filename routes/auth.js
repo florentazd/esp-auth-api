@@ -21,10 +21,11 @@ router.post("/signin-login", async (req, res)=>{
         const user = await prisma.user.findUnique({ where: {username: username} })
         if(!user) { res.status(404).json({message: "L'utilisateur n'existe pas !"}); return;}
         if(!bcrypt.compareSync(password, user.password)) { res.status(401).json({ message: "Mot de passe incorrect."}); return; }
-        const access_token  = jsonwentoken.sign({id: user.id}, process.env.JWT_KEY)
+        const access_token  = jsonwebtoken.sign({id: user.id}, process.env.JWT_KEY)
         delete user.password
         res.status(200).json({ user, access_token})
-    }catch{
+    }catch(e){
+        console.log(e)
         res.sendStatus(500)
     }
 })
@@ -91,16 +92,7 @@ router.post("/signin-phone", async (req, res)=>{
 router.post("/signin-phone/otp", (req, res)=> {
     try{
         const access_token = ent.encode(req.headers["authorization"] || "")
-
-
         const {otp_code} = req.body
-
-        if (!/^\d{6}$/.test(otp_code)) {
-            res.status(400).json({
-                message: 'Code invalide.'
-            })
-            return;
-        }
 
         if(!access_token){
             res.status(401).json({
@@ -108,6 +100,13 @@ router.post("/signin-phone/otp", (req, res)=> {
             })
             return;
         }
+        if (!/^\d{6}$/.test(otp_code)) {
+            res.status(400).json({
+                message: 'Code invalide.'
+            })
+            return;
+        }
+
         /*Verifier si le token est valid*/
         const user = jsonwebtoken.verify(access_token, process.env.JWT_KEY)
         /**/
